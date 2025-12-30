@@ -1,9 +1,12 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
+#include <math.h>
 #include <stm32f303_sys.h>
 #include <stm32f303_gpio.h>
 #include <stm32f303_can.h>
+
+#define PI			3.1415926535
 
 #define LINEIN0		PB0
 #define LINEIN1		PB1
@@ -28,5 +31,13 @@
 #define DEBUG_LED	PA15
 
 #define CAN_BITRATE	(1000000)
+
+/*CAN receive ID*/
+#define CANID_RAWDATA_R	0x010
+#define CANID_ANGDATA_R	0x011
+
+/*CAN transmit ID*/
+#define CANID_RAWDATA_T	0x100
+#define CANID_ANGDATA_T	0x101
 
 #endif /* __MAIN_H */

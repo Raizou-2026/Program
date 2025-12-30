@@ -123,9 +123,9 @@ class CAN
 		SysError_t receiveIT(CANRxHeader_t* rxheader, CANFifo_t fifo);
 
 		/*alternate handler*/
-		void TX_IRQHander(void);
-		void RX0_IRQHander(void);
-		void RX1_IRQHander(void);
+		void TX_IRQHandler(void);
+		void RX0_IRQHandler(void);
+		void RX1_IRQHandler(void);
 
 	private:
 		CAN_TypeDef*		ch;

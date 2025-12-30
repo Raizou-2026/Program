@@ -381,11 +381,11 @@ SysError_t bxCAN::receiveIT(CANRxHeader_t* rxheader, CANFifo_t fifo)
 	return SYS_OK;
 }
 
-void bxCAN::TX_IRQHander(void)
+void bxCAN::TX_IRQHandler(void)
 {
 }
 
-void bxCAN::RX0_IRQHander(void)
+void bxCAN::RX0_IRQHandler(void)
 {
 	uint32_t rfr;
 	uint32_t rir;
@@ -441,7 +441,7 @@ void bxCAN::RX0_IRQHander(void)
 	}
 }
 
-void bxCAN::RX1_IRQHander(void)
+void bxCAN::RX1_IRQHandler(void)
 {
 	uint32_t rfr;
 	uint32_t rir;

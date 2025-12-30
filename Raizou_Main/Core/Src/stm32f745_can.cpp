@@ -259,10 +259,10 @@ SysError_t CAN::start(void)
 	CAN1->FMR &= ~CAN_FMR_FINIT;
 
 
-	start = GetTick();
+	start = GetTick() / 1000;
 	ch->MCR &= ~CAN_MCR_INRQ;
 	while((ch->MSR & CAN_MSR_INAK_Msk) == CAN_MSR_INAK) {
-		if((GetTick() - start) > 10000) {
+		if((GetTick() / 1000 - start) > 10000) {
 			return SYS_ERROR;
 		}
 	}
@@ -333,9 +333,9 @@ SysError_t CAN::transmit(CANTxHeader_t *txheader, uint32_t timeout)
 									   (txheader->data[7] << CAN_TDH0R_DATA7_Pos);
 		ch->sTxMailBox[mailbox].TIR |= CAN_TI0R_TXRQ;
 
-		start = GetTick();
+		start = GetTick() / 1000;
 		while(!(ch->TSR & (1UL << (CAN_TSR_TME0_Pos + mailbox)))) {
-			if((GetTick() - start) > timeout) {
+			if((GetTick() / 1000 - start) > timeout) {
 				return SYS_TIMEOUT;
 			}
 		}
@@ -422,11 +422,11 @@ SysError_t CAN::receiveIT(CANRxHeader_t* rxheader, CANFifo_t fifo)
 	return SYS_OK;
 }
 
-void CAN::TX_IRQHander(void)
+void CAN::TX_IRQHandler(void)
 {
 }
 
-void CAN::RX0_IRQHander(void)
+void CAN::RX0_IRQHandler(void)
 {
 	uint32_t rfr;
 	uint32_t rir;
@@ -482,7 +482,7 @@ void CAN::RX0_IRQHander(void)
 	}
 }
 
-void CAN::RX1_IRQHander(void)
+void CAN::RX1_IRQHandler(void)
 {
 	uint32_t rfr;
 	uint32_t rir;

@@ -19,12 +19,12 @@ void SysTick_Handler(void)
 
 void CAN1_RX0_IRQHandler(void)
 {
-	Can1.RX0_IRQHander();
+	Can1.RX0_IRQHandler();
 }
 
 void CAN1_RX1_IRQHandler(void)
 {
-	Can1.RX1_IRQHander();
+	Can1.RX1_IRQHandler();
 }
 
 }
