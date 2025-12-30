@@ -7,6 +7,9 @@
 
 #include <stm32f745_adc.h>
 
+static CallbackFunc_t dma_callback = NULL;
+uint8_t can_read_buf = 0;
+
 void ADC1_Init(void)
 {
 	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
@@ -33,8 +36,8 @@ void ADC1_DMA_Init(uint8_t* adc_ch, uint8_t size, uint32_t* membufA, uint32_t* m
 						DMA_SxCR_MSIZE_0				|
 						DMA_SxCR_PSIZE_0				|
 						DMA_SxCR_MINC					|
-						DMA_SxCR_CIRC;
-//						DMA_SxCR_TCIE					|
+						DMA_SxCR_CIRC					|
+						DMA_SxCR_TCIE;
 //						DMA_SxCR_TEIE;
 
     DMA2_Stream0->NDTR = (uint32_t)size;
@@ -71,7 +74,37 @@ void ADC1_DMA_Init(uint8_t* adc_ch, uint8_t size, uint32_t* membufA, uint32_t* m
     	}
     }
 
-    /*DMA and ADC1 start*/
-    DMA2_Stream0->CR |= DMA_SxCR_EN;
-    ADC1->CR2 |= ADC_CR2_SWSTART;
+    NVIC_SetPriority(DMA2_Stream0_IRQn, NVIC_EncodePriority(3, 0, 0));
+    NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+}
+
+void ADC1_DMA_Start(void)
+{
+	DMA2_Stream0->CR |= DMA_SxCR_EN;
+	ADC1->CR2 |= ADC_CR2_SWSTART;
+}
+
+void SetCallbackFunc(CallbackFunc_t func)
+{
+	dma_callback = func;
+}
+
+void ADC1_DMA2_IRQHandler(void)
+{
+	uint32_t isr = DMA2->LISR;
+	uint32_t sxcr = DMA2_Stream0->CR;
+
+	if(isr & DMA_LISR_TCIF0_Msk) {
+		DMA2->LIFCR |= DMA_LIFCR_CTCIF0;
+
+		if(sxcr & DMA_SxCR_CT_Msk) {
+			can_read_buf = 0;
+		} else {
+			can_read_buf = 1;
+		}
+
+		if(dma_callback != NULL) {
+			dma_callback();
+		}
+	}
 }

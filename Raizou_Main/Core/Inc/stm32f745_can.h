@@ -104,6 +104,8 @@ class CAN
 {
 	public:
 		CanStates_t			can_state;
+		uint32_t			rx0_priority;
+		uint32_t			rx1_priority;
 
 		/*init function*/
 		CAN(CAN_TypeDef* hcan);

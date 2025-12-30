@@ -19,8 +19,6 @@
 void CAN1_Init(void);
 void GPIO_Init(void);
 
-uint16_t ADC1_Read(uint8_t ch);
-
 double Ball_Angle(void);
 
 uint32_t Line_DataRequest(uint32_t timeout);
@@ -33,6 +31,8 @@ bool can1_rx0_state = false;
 
 const uint8_t ball_ch[8] = {15, 4, 14, 5, 13, 10, 12, 11};
 uint16_t ballVal[2][8] = {0};
+double ballPhase[8];
+extern uint8_t can_read_buf;
 
 int main(void)
 {
@@ -42,19 +42,24 @@ int main(void)
 	ADC1_DMA_Init((uint8_t*)ball_ch, 8, (uint32_t*)&ballVal[0][0], (uint32_t*)&ballVal[1][0]);
 
 	Serial.init(115200);
-
 	setvbuf(stdout, NULL, _IONBF, 0);
+
+	for(uint8_t i = 0; i < 8; i++) {
+		ballPhase[i] = 45.0 * i * PI / 180.0;
+	}
+
+	ADC1_DMA_Start();
 
 	while(1)
 	{
-//		double lineAngle = Line_AngleRequest(1000);
-//		printf("%f\n", lineAngle);
-//
-//		pinToggle(LED1);
-//		pinToggle(LED2);
+		double lineAngle, ballAngle;
+		lineAngle = Line_AngleRequest(1000);
+		ballAngle = Ball_Angle();
 
-		printf("%d %d %d %d\n", (int)ballVal[0][0], (int)ballVal[0][1], (int)ballVal[1][0], (int)ballVal[1][1]);
-		delay_ms(500);
+		printf("BufNum:%d BAngle:%f LAngle:%f\n", (int)can_read_buf, ballAngle, lineAngle);
+
+		pinToggle(LED1);
+		pinToggle(LED2);
 	}
 
 	return 0;
@@ -74,6 +79,9 @@ void CAN1_Init(void)
 			.id				= 0x100,
 			.mask			= 0x7FF
 	};
+
+	Can1.rx0_priority = NVIC_EncodePriority(3, 1, 0);
+	Can1.rx1_priority = NVIC_EncodePriority(3, 2, 0);
 
 	Can1.init(CAN1_BITRATE);
 	Can1.setCallback(CAN_RX0_COMPLETE, CAN1_FIFO0ReceivedCallback);
@@ -111,9 +119,9 @@ double Ball_Angle(void)
 	uint16_t val;
 
 	for(uint8_t i = 0; i < 8; i++) {
-		val = ADC1_Read(ball_ch[i]);
-		x += cos(45.0 * i * PI / 180.0) * (4095 - val);
-		y += sin(45.0 * i * PI / 180.0) * (4095 - val);
+		val = 4095 - ballVal[0][i];
+		x += cos(ballPhase[i]) * val;
+		y += sin(ballPhase[i]) * val;
 	}
 
 	return atan2(y, x) * 180.0 / PI;

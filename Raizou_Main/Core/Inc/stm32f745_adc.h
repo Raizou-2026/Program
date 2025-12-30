@@ -13,5 +13,9 @@
 
 void ADC1_Init(void);
 void ADC1_DMA_Init(uint8_t* adc_ch, uint8_t size, uint32_t* membufA, uint32_t* membufB);
+void ADC1_DMA_Start(void);
+void SetCallbackFunc(CallbackFunc_t func);
+
+void ADC1_DMA2_IRQHandler(void);
 
 #endif /* INC_STM32F745_ADC_H_ */

@@ -13,6 +13,8 @@ CAN::CAN(CAN_TypeDef *hcan)
 {
 	ch							= hcan;
 	can_state					= SLEEPMODE;
+	rx0_priority				= NVIC_EncodePriority(3, 0, 0);
+	rx1_priority				= NVIC_EncodePriority(3, 1, 0);
 	prxheader[0]				= NULL;
 	prxheader[1]				= NULL;
 	CAN_RX0ReceivedCallback		= NULL;
@@ -23,6 +25,8 @@ CAN::CAN(CAN_TypeDef* hcan, GPIOPin_t rx, GPIOPin_t tx)
 {
 	ch							= hcan;
 	can_state					= SLEEPMODE;
+	rx0_priority				= NVIC_EncodePriority(3, 0, 0);
+	rx1_priority				= NVIC_EncodePriority(3, 1, 0);
 	rx_pin						= rx;
 	tx_pin						= tx;
 	prxheader[0]				= NULL;
@@ -73,6 +77,9 @@ SysError_t CAN::init(uint64_t bitrate)
 				(uint32_t)rate.TS2 << CAN_BTR_TS2_Pos |
 				(uint32_t)rate.TS1 << CAN_BTR_TS1_Pos |
 				(uint32_t)rate.BRP << CAN_BTR_BRP_Pos);
+
+	NVIC_SetPriority(CANx_RX0_IRQn, rx0_priority);
+	NVIC_SetPriority(CANx_RX1_IRQn, rx1_priority);
 
 	NVIC_EnableIRQ(CANx_TX_IRQn);
 	NVIC_EnableIRQ(CANx_RX0_IRQn);
@@ -125,6 +132,9 @@ SysError_t CAN::init(uint64_t bitrate, GPIOPin_t rx, GPIOPin_t tx)
 				(uint32_t)rate.TS2 << CAN_BTR_TS2_Pos |
 				(uint32_t)rate.TS1 << CAN_BTR_TS1_Pos |
 				(uint32_t)rate.BRP << CAN_BTR_BRP_Pos);
+
+	NVIC_SetPriority(CANx_RX0_IRQn, rx0_priority);
+	NVIC_SetPriority(CANx_RX1_IRQn, rx1_priority);
 
 	NVIC_EnableIRQ(CANx_TX_IRQn);
 	NVIC_EnableIRQ(CANx_RX0_IRQn);

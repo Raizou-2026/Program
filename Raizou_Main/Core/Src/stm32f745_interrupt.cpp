@@ -7,6 +7,7 @@
 
 #include <stm32f745_sys.h>
 #include <stm32f745_can.h>
+#include <stm32f745_adc.h>
 
 extern "C" {
 
@@ -15,6 +16,11 @@ extern CAN Can1;
 void SysTick_Handler(void)
 {
 	IncTick();
+}
+
+void DMA2_Stream0_IRQHandler(void)
+{
+	ADC1_DMA2_IRQHandler();
 }
 
 void CAN1_RX0_IRQHandler(void)
