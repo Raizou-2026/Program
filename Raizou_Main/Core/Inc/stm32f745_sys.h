@@ -10,10 +10,12 @@
 
 #include <stm32f7xx.h>
 
-#define SYSCLK		216000000
-#define AHBCLK		216000000
-#define APB1CLK		54000000
-#define APB2CLK		108000000
+#define SYSCLK			216000000
+#define AHBCLK			216000000
+#define APB1CLK			54000000
+#define APB1TIMERCLK	108000000
+#define APB2CLK			108000000
+#define APB2TIMERCLK	216000000
 
 #define ABS_DIFF(a, b)			((a > b) ? a - b : b - a)
 #define FULLTICK(carry, tick)	(((uint64_t)(carry) << 32) | (tick))

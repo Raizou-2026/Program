@@ -6,6 +6,7 @@
 #include <stm32f745_usart.h>
 #include <stm32f745_can.h>
 #include <stm32f745_adc.h>
+#include <stm32f745_timer.h>
 
 #define LED1			PD2
 #define LED2			PD3
@@ -17,7 +18,10 @@
 #define PI				3.1415926535
 
 void CAN1_Init(void);
+void Motor_Init(void);
 void GPIO_Init(void);
+
+void Motor_Start(void);
 
 double Ball_Angle(void);
 
@@ -38,6 +42,7 @@ int main(void)
 {
 	RCC_Init();
 	CAN1_Init();
+	Motor_Init();
 	GPIO_Init();
 	ADC1_DMA_Init((uint8_t*)ball_ch, 8, (uint32_t*)&ballVal[0][0], (uint32_t*)&ballVal[1][0]);
 
@@ -49,17 +54,24 @@ int main(void)
 	}
 
 	ADC1_DMA_Start();
+	Motor_Start();
 
 	while(1)
 	{
-		double lineAngle, ballAngle;
-		lineAngle = Line_AngleRequest(1000);
-		ballAngle = Ball_Angle();
+//		double lineAngle, ballAngle;
+//		lineAngle = Line_AngleRequest(1000);
+//		ballAngle = Ball_Angle();
+//
+//		printf("BufNum:%d BAngle:%f LAngle:%f\n", (int)can_read_buf, ballAngle, lineAngle);
+//
+//		pinToggle(LED1);
+//		pinToggle(LED2);
 
-		printf("BufNum:%d BAngle:%f LAngle:%f\n", (int)can_read_buf, ballAngle, lineAngle);
-
-		pinToggle(LED1);
-		pinToggle(LED2);
+		for(uint8_t i = 0; i < 1024; i++) {
+			TIM2->CCR1 = TIM2->CCR2 = TIM2->CCR3 = TIM2->CCR4 = i;
+			TIM3->CCR1 = TIM3->CCR2 = TIM3->CCR3 = TIM3->CCR4 = i;
+			delay_ms(10);
+		}
 	}
 
 	return 0;
@@ -93,6 +105,21 @@ void CAN1_Init(void)
 	Can1.start();
 }
 
+void Motor_Init(void)
+{
+	TIM_Init(TIM2, 1000, 1023);
+	TIM_Init(TIM3, 1000, 1023);
+
+	TIM_PWM_Init(TIM2, PA0, 1);
+	TIM_PWM_Init(TIM2, PA1, 2);
+	TIM_PWM_Init(TIM2, PA2, 3);
+	TIM_PWM_Init(TIM2, PA3, 4);
+	TIM_PWM_Init(TIM3, PA6, 1);
+	TIM_PWM_Init(TIM3, PA7, 2);
+	TIM_PWM_Init(TIM3, PC8, 3);
+	TIM_PWM_Init(TIM3, PC9, 4);
+}
+
 void GPIO_Init(void)
 {
 	pinMode(LED1, OUTPUT);
@@ -110,6 +137,12 @@ void GPIO_Init(void)
 	pinMode(PC3, ANALOG);
 	pinMode(PC4, ANALOG);
 	pinMode(PC5, ANALOG);
+}
+
+void Motor_Start(void)
+{
+	TIM_Start(TIM2);
+	TIM_Start(TIM3);
 }
 
 double Ball_Angle(void)
