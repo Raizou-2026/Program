@@ -1,42 +1,36 @@
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <stm32f745_sys.h>
-#include <stm32f745_gpio.h>
-#include <stm32f745_usart.h>
-#include <stm32f745_can.h>
-#include <stm32f745_adc.h>
-#include <stm32f745_timer.h>
-
-#define LED1			PD2
-#define LED2			PD3
-#define CAN1_RX			PB8
-#define CAN1_TX			PB9
+#include <user_main.h>
 
 #define CAN1_BITRATE	(1000000)
 
-#define PI				3.1415926535
+#define TIM2_FREQ		(1000)
+#define TIM3_FREQ		(1000)
+#define TIM2_RES		(1023)
+#define TIM3_RES		(1023)
+
+CAN Can1(CAN1, CAN1_RX, CAN1_TX);
+bool can1_rx0_state = false;
+
+double motorPhase[4];
+
+const uint8_t ball_ch[8] = {15, 4, 14, 5, 13, 10, 12, 11};
+extern uint8_t can_read_buf;
+uint16_t ballVal[2][8] = {0};
+double ballPhase[8];
 
 void CAN1_Init(void);
 void Motor_Init(void);
 void GPIO_Init(void);
 
 void Motor_Start(void);
+void Motor_StraightSpeed_d(uint16_t speed, double angle, double* pspeed);
+void Motor_StraightSpeed(uint16_t speed, float angle, float* pspeed);
 
-double Ball_Angle(void);
+float Ball_Angle(void);
 
 uint32_t Line_DataRequest(uint32_t timeout);
 double Line_AngleRequest(uint32_t timeout);
 
 void CAN1_FIFO0ReceivedCallback(void);
-
-CAN Can1(CAN1, CAN1_RX, CAN1_TX);
-bool can1_rx0_state = false;
-
-const uint8_t ball_ch[8] = {15, 4, 14, 5, 13, 10, 12, 11};
-uint16_t ballVal[2][8] = {0};
-double ballPhase[8];
-extern uint8_t can_read_buf;
 
 int main(void)
 {
@@ -50,7 +44,10 @@ int main(void)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	for(uint8_t i = 0; i < 8; i++) {
-		ballPhase[i] = 45.0 * i * PI / 180.0;
+		ballPhase[i] = DEGTORAD(45.0 * i);
+		if(i % 2 == 1) {
+			motorPhase[i / 2] = ballPhase[i];
+		}
 	}
 
 	ADC1_DMA_Start();
@@ -66,12 +63,24 @@ int main(void)
 //
 //		pinToggle(LED1);
 //		pinToggle(LED2);
+//
+//		for(uint8_t i = 0; i < 1024; i++) {
+//			TIM2->CCR1 = TIM2->CCR2 = TIM2->CCR3 = TIM2->CCR4 = i;
+//			TIM3->CCR1 = TIM3->CCR2 = TIM3->CCR3 = TIM3->CCR4 = i;
+//			delay_ms(10);
+//		}
 
-		for(uint8_t i = 0; i < 1024; i++) {
-			TIM2->CCR1 = TIM2->CCR2 = TIM2->CCR3 = TIM2->CCR4 = i;
-			TIM3->CCR1 = TIM3->CCR2 = TIM3->CCR3 = TIM3->CCR4 = i;
-			delay_ms(10);
+		float mspeed[4];
+		uint64_t start, end;
+
+		start = GetTick();
+		for(uint16_t i = 0; i < 360; i++) {
+			//Motor_StraightSpeed_d(1023, (double)i, mspeed);
+			Motor_StraightSpeed(1023, (float)i, mspeed);
 		}
+		end = GetTick();
+
+		printf("%ld\n", (long)(end - start));
 	}
 
 	return 0;
@@ -107,36 +116,34 @@ void CAN1_Init(void)
 
 void Motor_Init(void)
 {
-	TIM_Init(TIM2, 1000, 1023);
-	TIM_Init(TIM3, 1000, 1023);
+	TIM_Init(TIM2, TIM2_FREQ, TIM2_RES);
+	TIM_Init(TIM3, TIM3_FREQ, TIM3_RES);
 
-	TIM_PWM_Init(TIM2, PA0, 1);
-	TIM_PWM_Init(TIM2, PA1, 2);
-	TIM_PWM_Init(TIM2, PA2, 3);
-	TIM_PWM_Init(TIM2, PA3, 4);
-	TIM_PWM_Init(TIM3, PA6, 1);
-	TIM_PWM_Init(TIM3, PA7, 2);
-	TIM_PWM_Init(TIM3, PC8, 3);
-	TIM_PWM_Init(TIM3, PC9, 4);
+	TIM_PWM_Init(TIM2, TIM2_CH1, 1);
+	TIM_PWM_Init(TIM2, TIM2_CH2, 2);
+	TIM_PWM_Init(TIM2, TIM2_CH3, 3);
+	TIM_PWM_Init(TIM2, TIM2_CH4, 4);
+	TIM_PWM_Init(TIM3, TIM3_CH1, 1);
+	TIM_PWM_Init(TIM3, TIM3_CH2, 2);
+	TIM_PWM_Init(TIM3, TIM3_CH3, 3);
+	TIM_PWM_Init(TIM3, TIM3_CH4, 4);
 }
 
 void GPIO_Init(void)
 {
-	pinMode(LED1, OUTPUT);
-	pinMode(LED2, OUTPUT);
-	pinWrite(LED1, HIGH);
-	pinWrite(LED2, LOW);
+	pinMode(LED1, OUTPUT);	pinWrite(LED1, HIGH);
+	pinMode(LED2, OUTPUT);	pinWrite(LED2, LOW);
 
-	pinMode(PA4, ANALOG);
-	pinMode(PA5, ANALOG);
-	pinMode(PB0, ANALOG);
-	pinMode(PB1, ANALOG);
-	pinMode(PC0, ANALOG);
-	pinMode(PC1, ANALOG);
-	pinMode(PC2, ANALOG);
-	pinMode(PC3, ANALOG);
-	pinMode(PC4, ANALOG);
-	pinMode(PC5, ANALOG);
+	pinMode(BALL_ADCIN4, ANALOG);
+	pinMode(BALL_ADCIN5, ANALOG);
+	pinMode(BALL_ADCIN10, ANALOG);
+	pinMode(BALL_ADCIN11, ANALOG);
+	pinMode(BALL_ADCIN12, ANALOG);
+	pinMode(BALL_ADCIN13, ANALOG);
+	pinMode(BALL_ADCIN14, ANALOG);
+	pinMode(BALL_ADCIN15, ANALOG);
+	pinMode(DISP_ADCIN8, ANALOG);
+	pinMode(DISP_ADCIN9, ANALOG);
 }
 
 void Motor_Start(void)
@@ -145,24 +152,62 @@ void Motor_Start(void)
 	TIM_Start(TIM3);
 }
 
-double Ball_Angle(void)
+void Motor_StraightSpeed_d(uint16_t speed, double angle, double* pspeed)
 {
-	double x = 0.0;
-	double y = 0.0;
+	uint8_t max = 0;
+	double __angle, gain;
+
+	__angle = DEGTORAD(angle);
+	for(uint8_t i = 0; i < 4; i++) {
+		pspeed[i] = sin(__angle - motorPhase[i]) * speed;
+		if(abs(pspeed[max]) <= abs(pspeed[i])) {
+			max = i;
+		}
+	}
+
+	gain = speed / abs(pspeed[max]);
+	for(uint8_t i = 0; i < 4; i++) {
+		pspeed[i] *= gain;
+	}
+}
+
+void Motor_StraightSpeed(uint16_t speed, float angle, float* pspeed)
+{
+	uint8_t max = 0;
+	float __angle, gain;
+
+	__angle = DEGTORAD(angle);
+	for(uint8_t i = 0; i < 4; i++) {
+		pspeed[i] = arm_sin_f32(__angle - motorPhase[i]) * speed;
+		if(fabsf(pspeed[max]) <= fabsf(pspeed[i])) {
+			max = i;
+		}
+	}
+
+	gain = (float)speed / abs(pspeed[max]);
+	for(uint8_t i = 0; i < 4; i++) {
+		pspeed[i] *= gain;
+	}
+}
+
+float Ball_Angle(void)
+{
+	float x = 0.0;
+	float y = 0.0;
 	uint16_t val;
 
 	for(uint8_t i = 0; i < 8; i++) {
 		val = 4095 - ballVal[0][i];
-		x += cos(ballPhase[i]) * val;
-		y += sin(ballPhase[i]) * val;
+		x += arm_cos_f32(ballPhase[i]) * val;
+		y += arm_sin_f32(ballPhase[i]) * val;
 	}
 
-	return atan2(y, x) * 180.0 / PI;
+	return RADTODEG(atan2f(y, x));
 }
 
 uint32_t Line_DataRequest(uint32_t timeout)
 {
-	CANTxHeader_t reqdata = {0x010, STID, REMOTE_FRAME, 3};
+	CANTxHeader_t reqdata = {CANID_LINERAW_T, STID, REMOTE_FRAME, 3};
 	CANRxHeader_t rx0header;
 	uint32_t data = 0;
 	uint64_t start = GetTick() / 1000;
@@ -177,7 +222,7 @@ uint32_t Line_DataRequest(uint32_t timeout)
 		}
 	}
 
-	if(rx0header.id == 0x100) {
+	if(rx0header.id == CANID_LINERAW_R) {
 		data = (rx0header.data[0] << 10) | (rx0header.data[1] << 2) | (rx0header.data[2] & 0b11);
 	}
 
@@ -186,7 +231,7 @@ uint32_t Line_DataRequest(uint32_t timeout)
 
 double Line_AngleRequest(uint32_t timeout)
 {
-	CANTxHeader_t reqdata = {0x011, STID, REMOTE_FRAME, 8};
+	CANTxHeader_t reqdata = {CANID_LINEANG_T, STID, REMOTE_FRAME, 8};
 	CANRxHeader_t rx0header;
 	double angle = 300.0;
 	uint64_t start = GetTick() / 1000;
@@ -201,7 +246,7 @@ double Line_AngleRequest(uint32_t timeout)
 		}
 	}
 
-	if(rx0header.id == 0x101) {
+	if(rx0header.id == CANID_LINEANG_R) {
 		memcpy(&angle, rx0header.data, sizeof(double));
 	}
 
