@@ -2,6 +2,9 @@
 
 #define CAN1_BITRATE	(1000000)
 
+#define BNO_ADDRESS		0x28
+#define BNO_EULER		0x1A
+
 #define TIM2_FREQ		(1000)
 #define TIM3_FREQ		(1000)
 #define TIM2_RES		(1023)
@@ -22,6 +25,11 @@ float ballPhase[8];
 void CAN1_Init(void);
 void Motor_Init(void);
 void GPIO_Init(void);
+
+int16_t BNO_Marge(uint8_t low, uint8_t high);
+void BNO_Write(uint8_t reg, uint8_t val, uint32_t delay);
+void BNO_Init(void);
+float BNO_GetYaw(void);
 
 void Motor_Start(void);
 void Motor_StraightSpeed_d(uint16_t speed, double angle, double* pspeed);
@@ -59,20 +67,17 @@ int main(void)
 		}
 	}
 
+	BNO_Init();
 	ADC1_DMA_Start();
 	Motor_Start();
 
 	while(1)
 	{
-		uint8_t data1 = 0x00, data2 = 0x00;
+		float yaw = BNO_GetYaw();
 
-		i2c1.masterTransmit(0x28, &data1, 1, 500);
-		i2c1.masterReceive(0x28, &data2, 1, 500);
-		if(data2 == 0xA0) {
-			printf("found\n");
-		} else {
-			printf("not found\n");
-		}
+		printf("%f\n", yaw);
+
+		delay_ms(10);
 	}
 
 	return 0;
@@ -158,6 +163,58 @@ void GPIO_Init(void)
 	pinMode(FMC_NWE, OTHER);	AFSelect(FMC_NWE, AF12);
 	pinMode(FMC_NE1, OTHER);	AFSelect(FMC_NE1, AF12);
 	pinMode(FMC_A16, OTHER);	AFSelect(FMC_A16, AF12);
+}
+
+int16_t BNO_Marge(uint8_t low, uint8_t high)
+{
+	uint16_t data = (high << 8) | low;
+
+	if(data > 32767) {
+		return data - 65536;
+	}
+	return data;
+}
+
+void BNO_Write(uint8_t reg, uint8_t val, uint32_t delay)
+{
+	uint8_t ptemp[2] = {reg, val};
+
+	i2c1.masterTransmit(BNO_ADDRESS, ptemp, 2, 1000);
+	delay_ms(delay);
+}
+
+void BNO_Init(void)
+{
+	uint8_t bnoCheck = 0x00;
+	uint8_t is_bno = 0x00;
+
+	i2c1.masterTransmit(BNO_ADDRESS, &bnoCheck, 1, 500);
+	i2c1.masterReceive(BNO_ADDRESS, &is_bno, 1, 500);
+	if(is_bno == 0xA0) {
+		BNO_Write(0x3D, 0x00, 80);
+		BNO_Write(0x3F, 0x20, 1000);
+		BNO_Write(0x3E, 0x00, 80);
+		BNO_Write(0x3F, 0x80, 1000);
+		BNO_Write(0x3D, 0x0C, 80);
+
+		printf("BNO055 found.\n");
+	} else {
+		while(1) {
+			printf("BNO055 not found.\n");
+			delay_ms(1000);
+		}
+	}
+}
+
+float BNO_GetYaw(void)
+{
+	uint8_t reqData = BNO_EULER;
+	uint8_t dataBuf[6] = {0};
+
+	i2c1.masterTransmit(BNO_ADDRESS, &reqData, 1, 100);
+	i2c1.masterReceive(BNO_ADDRESS, dataBuf, 6, 100);
+
+	return (float)(BNO_Marge(dataBuf[0], dataBuf[1])) / 16.0;
 }
 
 void Motor_Start(void)
