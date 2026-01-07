@@ -3,6 +3,54 @@
 static uint32_t preTick = 0;
 static int32_t tickCarry = 0;
 
+void MPU_Config_FMC_LCD(void)
+{
+    /* MPU 無効化 */
+    MPU->CTRL = 0;
+
+    /* リージョン番号選択（未使用なら 0 でOK） */
+    MPU->RNR = 0;
+
+    /* ベースアドレス設定
+       - FMC Bank1: 0x6000_0000
+       - RBAR の下位5bitは無視される
+    */
+    MPU->RBAR = 0x60000000;
+
+    /*
+     * RASR 構成
+     *
+     * XN  = 1  : 実行禁止
+     * AP  = 3  : フルアクセス
+     * TEX = 0
+     * C   = 0  : キャッシュ無効
+     * B   = 0  : バッファ無効
+     * S   = 1  : Shareable
+     * SIZE = 23 : 16MB (2^(23+1))
+     * ENABLE = 1
+     */
+    MPU->RASR =
+        (1 << MPU_RASR_XN_Pos) |
+        (3 << MPU_RASR_AP_Pos) |
+        (0 << MPU_RASR_TEX_Pos) |
+        (0 << MPU_RASR_C_Pos) |
+        (1 << MPU_RASR_B_Pos) |   // ← ここ重要
+        (0 << MPU_RASR_S_Pos) |
+        (23 << MPU_RASR_SIZE_Pos) |
+        (1 << MPU_RASR_ENABLE_Pos);
+
+    /* MPU 有効化
+       PRIVDEFENA = 1 → 未定義領域はデフォルトマップ使用
+    */
+    MPU->CTRL =
+        MPU_CTRL_ENABLE_Msk |
+        MPU_CTRL_PRIVDEFENA_Msk;
+
+    /* MPU 設定反映のためのバリア */
+    __DSB();
+    __ISB();
+}
+
 void RCC_Init(void)
 {
 	RCC->APB1ENR |= RCC_APB1ENR_PWREN;

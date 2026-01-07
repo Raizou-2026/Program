@@ -20,6 +20,9 @@
 #define ABS_DIFF(a, b)			((a > b) ? a - b : b - a)
 #define FULLTICK(carry, tick)	(((uint64_t)(carry) << 32) | (tick))
 
+#define DISABLE			false
+#define ENABLE			true
+
 typedef enum
 {
 	SYS_OK		= 0UL,
@@ -29,6 +32,8 @@ typedef enum
 }SysError_t;
 
 typedef void (*CallbackFunc_t)(void);
+
+void MPU_Config_FMC_LCD(void);
 
 void RCC_Init(void);
 

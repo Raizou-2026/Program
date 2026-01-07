@@ -15,8 +15,10 @@
 #include <stm32f745_gpio.h>
 #include <stm32f745_usart.h>
 #include <stm32f745_can.h>
+#include <stm32f745_i2c.h>
 #include <stm32f745_adc.h>
 #include <stm32f745_timer.h>
+#include <stm32f745_fmc.h>
 
 #define ARM_MATH_CM7
 extern "C" {
@@ -58,10 +60,39 @@ extern "C" {
 #define DISP_ADCIN8			PB0
 #define DISP_ADCIN9			PB1
 
+/*FMC(LCD)*/
+#define FMC_D0				PD14
+#define FMC_D1				PD15
+#define FMC_D2				PD0
+#define FMC_D3				PD1
+#define FMC_D4				PE7
+#define FMC_D5				PE8
+#define FMC_D6				PE9
+#define FMC_D7				PE10
+#define FMC_D8				PE11
+#define FMC_D9				PE12
+#define FMC_D10				PE13
+#define FMC_D11				PE14
+#define FMC_D12				PE15
+#define FMC_D13				PD8
+#define FMC_D14				PD9
+#define FMC_D15				PD10
+#define FMC_NOE				PD4
+#define FMC_NWE				PD5
+#define FMC_NE1				PD7
+#define FMC_A16				PD11
+#define LCD_RST				PB2
+
 /*CAN ID*/
 #define CANID_LINERAW_T		(0x010)
 #define CANID_LINEANG_T		(0x011)
 #define CANID_LINERAW_R		(0x100)
 #define CANID_LINEANG_R		(0x101)
+
+/*FMC LCD*/
+#define LCD_CMD 			(*(volatile uint16_t*)(0x60000000))
+#define LCD_DATA 			(*(volatile uint16_t*)(0x60020000))
+#define LCD_WRITECMD(cmd)	(LCD_CMD = (cmd))
+#define LCD_WRITEDATA(data)	(LCD_DATA = (data))
 
 #endif /* INC_USER_MAIN_H_ */
