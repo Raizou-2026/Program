@@ -145,10 +145,16 @@
 
 void TIM_Init(TIM_TypeDef* htim, uint32_t freq, uint32_t resolution)
 {
-	if((uint32_t)htim == TIM2_BASE) {
-		RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-	} else {
-		RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+	switch ((uint32_t)htim) {
+		case TIM2_BASE:
+			RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+			break;
+		case TIM3_BASE:
+			RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+			break;
+		case TIM12_BASE:
+			RCC->APB1ENR |= RCC_APB1ENR_TIM12EN;
+			break;
 	}
 
 	htim->PSC = APB1TIMERCLK / (freq * (resolution + 1));
@@ -160,10 +166,16 @@ void TIM_Init(TIM_TypeDef* htim, uint32_t freq, uint32_t resolution)
 void TIM_PWM_Init(TIM_TypeDef* htim, GPIOPin_t pin, uint8_t ch)
 {
 	pinMode(pin, OTHER);
-	if((uint32_t)htim == TIM2_BASE) {
-		AFSelect(pin, AF1);
-	} else {
-		AFSelect(pin, AF2);
+	switch ((uint32_t)htim) {
+		case TIM2_BASE:
+			AFSelect(pin, AF1);
+			break;
+		case TIM3_BASE:
+			AFSelect(pin, AF2);
+			break;
+		case TIM12_BASE:
+			AFSelect(pin, AF9);
+			break;
 	}
 
 	switch(ch) {

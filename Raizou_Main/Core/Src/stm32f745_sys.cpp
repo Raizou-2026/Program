@@ -1,55 +1,7 @@
 #include <stm32f745_sys.h>
 
-static uint32_t preTick = 0;
-static int32_t tickCarry = 0;
-
-void MPU_Config_FMC_LCD(void)
-{
-    /* MPU 無効化 */
-    MPU->CTRL = 0;
-
-    /* リージョン番号選択（未使用なら 0 でOK） */
-    MPU->RNR = 0;
-
-    /* ベースアドレス設定
-       - FMC Bank1: 0x6000_0000
-       - RBAR の下位5bitは無視される
-    */
-    MPU->RBAR = 0x60000000;
-
-    /*
-     * RASR 構成
-     *
-     * XN  = 1  : 実行禁止
-     * AP  = 3  : フルアクセス
-     * TEX = 0
-     * C   = 0  : キャッシュ無効
-     * B   = 0  : バッファ無効
-     * S   = 1  : Shareable
-     * SIZE = 23 : 16MB (2^(23+1))
-     * ENABLE = 1
-     */
-    MPU->RASR =
-        (1 << MPU_RASR_XN_Pos) |
-        (3 << MPU_RASR_AP_Pos) |
-        (0 << MPU_RASR_TEX_Pos) |
-        (0 << MPU_RASR_C_Pos) |
-        (1 << MPU_RASR_B_Pos) |   // ← ここ重要
-        (0 << MPU_RASR_S_Pos) |
-        (23 << MPU_RASR_SIZE_Pos) |
-        (1 << MPU_RASR_ENABLE_Pos);
-
-    /* MPU 有効化
-       PRIVDEFENA = 1 → 未定義領域はデフォルトマップ使用
-    */
-    MPU->CTRL =
-        MPU_CTRL_ENABLE_Msk |
-        MPU_CTRL_PRIVDEFENA_Msk;
-
-    /* MPU 設定反映のためのバリア */
-    __DSB();
-    __ISB();
-}
+static volatile uint32_t preTick = 0;
+static volatile uint32_t tickCarry = 0;
 
 void RCC_Init(void)
 {
@@ -91,17 +43,11 @@ void RCC_Init(void)
 
 	preTick = DWT->CYCCNT;
 
-	SysTick->LOAD = (AHBCLK / 100) - 1;
+	SysTick->LOAD = (AHBCLK / 1000) - 1;
 	SysTick->VAL = 0;
 	SysTick->CTRL |= SysTick_CTRL_CLKSOURCE_Msk |
 				     SysTick_CTRL_TICKINT_Msk |
 					 SysTick_CTRL_ENABLE_Msk;
-}
-
-void delay_ms(uint32_t ms)
-{
-	int64_t start = FULLTICK(tickCarry, DWT->CYCCNT);
-	while((((int64_t)FULLTICK(tickCarry, DWT->CYCCNT) - start) / 216000) < ms);
 }
 
 void IncTick(void)
@@ -114,5 +60,36 @@ void IncTick(void)
 
 uint64_t GetTick(void)
 {
-	return FULLTICK(tickCarry, DWT->CYCCNT) / 216;
+	uint32_t tick;
+	uint32_t prev = preTick;
+	uint32_t carry = tickCarry;
+
+	tick = DWT->CYCCNT;
+	if(tick < prev) {
+		carry++;
+	}
+
+	return FULLTICK(carry, tick);
+}
+
+uint64_t millis(void)
+{
+	return GetTick() / 216000;
+}
+
+uint64_t micros(void)
+{
+	return GetTick() / 216;
+}
+
+void delay_ms(uint64_t ms)
+{
+	uint64_t start = millis();
+	while((millis() - start) < ms);
+}
+
+void delay_us(uint64_t us)
+{
+	uint64_t start = micros();
+	while((micros() - start) < us);
 }

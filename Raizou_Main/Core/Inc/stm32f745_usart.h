@@ -70,5 +70,4 @@ extern "C" int __io_putchar(int ch);
 
 extern USART Serial;
 
-
 #endif /* INC_STM32F745_USART_H_ */

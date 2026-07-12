@@ -44,6 +44,15 @@ void pinSpeed(GPIOPin_t pin, GPIOSpeed_t speed)
 	GPIOx(port)->OSPEEDR |= (speed << (pin_num*2));
 }
 
+void pinPullSelect(GPIOPin_t pin, GPIOPullType_t pull)
+{
+	uint8_t port = PORT_NUM(pin);
+	uint8_t pin_num = PIN_NUM(pin);
+
+	GPIOx(port)->PUPDR &= ~(0b11UL << (pin_num * 2));
+	GPIOx(port)->PUPDR |= (pull << (pin_num*2));
+}
+
 void AFSelect(GPIOPin_t pin, GPIOAF_t af_num)
 {
 	uint8_t port = PORT_NUM(pin);

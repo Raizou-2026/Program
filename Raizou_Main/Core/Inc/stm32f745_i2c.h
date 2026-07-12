@@ -11,35 +11,57 @@
 #include <stm32f745_sys.h>
 #include <stm32f745_gpio.h>
 
-class I2C {
+typedef enum
+{
+	HOGEHOGE
+} I2CCallbackType_t;
+
+class I2C
+{
 	public:
-		/*timing setting*/
-		uint32_t			speedFreq;
-		uint16_t			riseTime;
-		uint16_t			fallTime;
-		uint8_t				dFilter;
-		bool				aFilter;
-
 		/*setting*/
-		I2C(I2C_TypeDef* hi2c, GPIOPin_t scl, GPIOPin_t sda);
-		SysError_t init(void);
-//		void setCallback(void);
+		I2C(I2C_TypeDef* hi2c);
+		I2C(I2C_TypeDef* hi2c, GPIOPin_t sda, GPIOPin_t scl);
+		SysError_t	init(uint32_t i2c_clock);
+		SysError_t	init(uint32_t i2c_clock, GPIOPin_t sda, GPIOPin_t scl);
+		void		setCallback(I2CCallbackType_t type, CallbackFunc_t func);
+		bool		addressMatch(uint8_t devaddr);
 
-		/*master transmit & receive*/
-		SysError_t masterTransmit(uint8_t address, uint8_t* buf, uint16_t size, uint64_t timeout);
-//		SysError_t masterTransmitIT(uint8_t address, uint8_t* buf, uint16_t size);
-//		SysError_t masterTransmitDMA(uint8_t address, uint8_t* buf, uint16_t size);
-		SysError_t masterReceive(uint8_t address, uint8_t* buf, uint16_t size, uint64_t timeout);
-//		SysError_t masterReceiveIT(uint8_t address, uint8_t* buf, uint16_t size);
-//		SysError_t masterReceiveDMA(uint8_t address, uint8_t* buf, uint16_t size);
+		/*transmit*/
+		SysError_t 	masterTransmit(uint8_t devaddr, uint8_t* databuf, uint16_t datasize, uint64_t timeout_ms);
+		SysError_t 	masterTransmitIT(uint8_t devaddr, uint8_t* databuf, uint16_t datasize);
+		SysError_t 	masterTransmitDMA(uint8_t devaddr, uint8_t* databuf, uint16_t datasize);
+
+		/*receive*/
+		SysError_t masterReceive(uint8_t devaddr, uint8_t* databuf, uint16_t datasize, uint64_t timeout_ms);
+		SysError_t masterReceiveIT(uint8_t devaddr, uint8_t* databuf, uint16_t datasize);
+		SysError_t masterReceiveDMA(uint8_t devaddr, uint8_t* databuf, uint16_t datasize);
+
+		/*memory access*/
+		SysError_t memWrite(uint8_t devaddr, uint16_t regaddr, bool is_16bitaddr, uint8_t* databuf, uint16_t datasize, uint32_t timeout_ms);
+		SysError_t memRead(uint8_t devaddr, uint16_t regaddr, bool is_16bitaddr, uint8_t* databuf, uint16_t datasize, uint32_t timeout_ms);
 
 	private:
-		I2C_TypeDef*		ch;
-		IRQn_Type			I2Cx_IRQn;
-		GPIOPin_t			scl_pin, sda_pin;
+		I2C_TypeDef* 	ch;
+		IRQn_Type		I2Cx_ER_IRQn;
+		IRQn_Type		I2Cx_EV_IRQn;
+		uint32_t 		APBxClk;
+		GPIOPin_t 		sda_pin, scl_pin;
 
-		uint32_t calcTiming(void);
+		/*GPIO config function*/
 		void pinInit(void);
+
+		void fastplasEnable(void);
+
+		/*Hardware control function*/
+		bool checkError(void);
+		SysError_t waitFlag(uint32_t isr_flag, bool type, uint64_t timeout_ms, uint64_t start_ms);
+		void clearFlag(uint32_t icr_flag);
+
+		void masterInit(uint8_t devaddr, uint8_t size, bool autoend, bool reload, bool wr);
+		void masterReload(uint8_t size, bool reload);
+		SysError_t masterWriteBuf(uint8_t* databuf, uint16_t datasize, uint8_t nbytes, uint64_t timeout_ms, uint64_t start_ms);
+		SysError_t masterReadBuf(uint8_t* databuf, uint16_t datasize, uint8_t nbytes, uint64_t timeout_ms, uint64_t start_ms);
 };
 
 #endif /* INC_STM32F745_I2C_H_ */

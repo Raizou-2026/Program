@@ -33,6 +33,12 @@ extern "C" {
 /*INPUT/OUTPUT*/
 #define LED1				PD2
 #define LED2				PD3
+#define SW1					PB3
+#define SW2					PB4
+#define SW3					PB5
+#define BALL_CATCH			PA8
+#define KICK_CHARGE			PC6
+#define KICK_PUSH			PC7
 
 /*CAN*/
 #define CAN1_RX				PB8

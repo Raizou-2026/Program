@@ -40,6 +40,9 @@ void RCC_Init(void);
 void IncTick(void);
 uint64_t GetTick(void);
 
-void delay_ms(uint32_t ms);
+uint64_t millis(void);
+uint64_t micros(void);
+void delay_ms(uint64_t ms);
+void delay_us(uint64_t us);
 
 #endif /* INC_STM32F745_SYS_H_ */

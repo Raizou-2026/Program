@@ -142,22 +142,37 @@ double Line_AngleRead(uint8_t* buf)
 	double y = 0.0;
 	double angle;
 	uint8_t pos;
+	bool valid = false;
 
 	for(uint8_t i = 0; i < 8; i++) {
 		pos = (1 << i);
 
 		if(!(buf[0] & pos)) {
-			angle = (360.0 - (i * 22.5)) * PI / 180.0;
+			angle = (360.0 - (i * 20.0)) * PI / 180.0;
 			x += cos(angle);
 			y += sin(angle);
+			valid = true;
 		}
 		if(!(buf[1] & pos)) {
-			angle = (360.0 - ((i + 8) * 22.5)) * PI / 180.0;
+			angle = (360.0 - ((i + 8) * 20.0)) * PI / 180.0;
 			x += cos(angle);
 			y += sin(angle);
+			valid = true;
 		}
 	}
+	if(!(buf[2] & 0b10)) {
+		x += cos(20.0 * PI / 180.0);
+		y += sin(20.0 * PI / 180.0);
+		valid = true;
+	}
+	if(!(buf[2] & 0b01)) {
+		x += cos(0.0);
+		valid = true;
+	}
 
+	if(valid == false) {
+		return 300.0;
+	}
 	return atan2(y, x) * 180.0 / PI;
 }
 
